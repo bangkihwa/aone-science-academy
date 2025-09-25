@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>목동에이원과학학원 - 학생 관리 시스템</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-shadow {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .tab-active {
+            border-bottom: 3px solid #667eea;
+            color: #667eea;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal.active {
+            display: flex;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="gradient-bg shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-flask text-white text-3xl"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">목동에이원과학학원</h1>
+                        <p class="text-purple-100 text-sm">학생 관리 시스템</p>
+                    </div>
+                </div>
+                <div class="flex space-x-4">
+                    <button onclick="exportToGoogleSheets()" class="bg-white text-purple-600 px-4 py-2 rounded-lg hover:bg-purple-50 transition">
+                        <i class="fab fa-google-drive mr-2"></i>Google Sheets 내보내기
+                    </button>
+                    <button onclick="showSettings()" class="text-white hover:text-purple-200 transition">
+                        <i class="fas fa-cog text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="container mx-auto px-4">
+            <div class="flex space-x-8">
+                <button class="tab-btn py-4 px-2 font-medium transition tab-active" data-tab="dashboard">
+                    <i class="fas fa-chart-line mr-2"></i>대시보드
+                </button>
+                <button class="tab-btn py-4 px-2 font-medium transition hover:text-purple-600" data-tab="students">
+                    <i class="fas fa-users mr-2"></i>학생 관리
+                </button>
+                <button class="tab-btn py-4 px-2 font-medium transition hover:text-purple-600" data-tab="classes">
+                    <i class="fas fa-chalkboard-teacher mr-2"></i>수업 카드
+                </button>
+                <button class="tab-btn py-4 px-2 font-medium transition hover:text-purple-600" data-tab="tests">
+                    <i class="fas fa-clipboard-check mr-2"></i>평가 입력
+                </button>
+                <button class="tab-btn py-4 px-2 font-medium transition hover:text-purple-600" data-tab="reports">
+                    <i class="fas fa-file-alt mr-2"></i>보고서
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Dashboard Tab -->
+        <div id="dashboard-tab" class="tab-content fade-in">
+            <!-- Statistics Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-lg p-6 card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">전체 학생</p>
+                            <p class="text-3xl font-bold text-gray-800" id="total-students">0</p>
+                        </div>
+                        <i class="fas fa-users text-purple-500 text-3xl"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg p-6 card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">오늘 수업</p>
+                            <p class="text-3xl font-bold text-gray-800" id="today-classes">0</p>
+                        </div>
+                        <i class="fas fa-calendar-day text-blue-500 text-3xl"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg p-6 card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">미완료 과제</p>
+                            <p class="text-3xl font-bold text-gray-800" id="pending-tasks">0</p>
+                        </div>
+                        <i class="fas fa-tasks text-orange-500 text-3xl"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg p-6 card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">이번 달 평균</p>
+                            <p class="text-3xl font-bold text-gray-800" id="avg-score">0</p>
+                        </div>
+                        <i class="fas fa-chart-bar text-green-500 text-3xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activities -->
+            <div class="bg-white rounded-lg card-shadow p-6">
+                <h2 class="text-xl font-bold mb-4">최근 활동</h2>
+                <div id="recent-activities" class="space-y-3">
+                    <p class="text-gray-500">최근 활동이 없습니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Students Management Tab -->
+        <div id="students-tab" class="tab-content hidden">
+            <div class="bg-white rounded-lg card-shadow p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold">학생 목록</h2>
+                    <button onclick="openStudentModal()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-plus mr-2"></i>학생 추가
+                    </button>
+                </div>
+                
+                <!-- Search and Filter -->
+                <div class="flex gap-4 mb-6">
+                    <input type="text" id="student-search" placeholder="학생 검색..." class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <select id="grade-filter" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <option value="">전체 학년</option>
+                        <option value="1">중1</option>
+                        <option value="2">중2</option>
+                        <option value="3">중3</option>
+                        <option value="4">고1</option>
+                        <option value="5">고2</option>
+                        <option value="6">고3</option>
+                    </select>
+                </div>
+
+                <!-- Students Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">이름</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">학년</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">전화번호</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">등록일</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="students-table" class="divide-y divide-gray-200">
+                            <!-- Students will be added here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Class Cards Tab -->
+        <div id="classes-tab" class="tab-content hidden">
+            <div class="bg-white rounded-lg card-shadow p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold">수업 카드</h2>
+                    <button onclick="openClassModal()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-plus mr-2"></i>수업 카드 작성
+                    </button>
+                </div>
+                
+                <div id="class-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Class cards will be added here dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tests Tab -->
+        <div id="tests-tab" class="tab-content hidden">
+            <div class="bg-white rounded-lg card-shadow p-6">
+                <h2 class="text-xl font-bold mb-6">평가 입력</h2>
+                
+                <!-- Test Input Form -->
+                <form id="test-form" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">학생 선택</label>
+                            <select id="test-student" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                                <option value="">학생을 선택하세요</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">평가 유형</label>
+                            <select id="test-type" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                                <option value="">평가 유형 선택</option>
+                                <option value="test">테스트</option>
+                                <option value="homework">과제</option>
+                                <option value="online">온라인테스트</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">과목</label>
+                            <input type="text" id="test-subject" placeholder="예: 물리, 화학, 생물" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">점수</label>
+                            <input type="number" id="test-score" min="0" max="100" placeholder="0-100" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">날짜</label>
+                            <input type="date" id="test-date" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">메모</label>
+                            <input type="text" id="test-memo" placeholder="선택사항" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                    </div>
+                    <button type="submit" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-save mr-2"></i>평가 저장
+                    </button>
+                </form>
+
+                <!-- Test Results Table -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold mb-4">최근 평가 기록</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">날짜</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">학생</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">유형</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">과목</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">점수</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">메모</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tests-table" class="divide-y divide-gray-200">
+                                <!-- Test results will be added here dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div id="reports-tab" class="tab-content hidden">
+            <div class="bg-white rounded-lg card-shadow p-6">
+                <h2 class="text-xl font-bold mb-6">학생 보고서</h2>
+                
+                <!-- Report Generation Form -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <select id="report-student" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <option value="">학생 선택</option>
+                    </select>
+                    <input type="month" id="report-month" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <button onclick="generateReport()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-file-export mr-2"></i>보고서 생성
+                    </button>
+                </div>
+
+                <!-- Report Content -->
+                <div id="report-content" class="hidden">
+                    <div class="border-2 border-gray-200 rounded-lg p-8">
+                        <div class="text-center mb-8">
+                            <h3 class="text-2xl font-bold mb-2">목동에이원과학학원</h3>
+                            <p class="text-gray-600">학생 월간 보고서</p>
+                        </div>
+                        <div id="report-details">
+                            <!-- Report details will be generated here -->
+                        </div>
+                    </div>
+                    <div class="mt-4 flex gap-4">
+                        <button onclick="printReport()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                            <i class="fas fa-print mr-2"></i>인쇄
+                        </button>
+                        <button onclick="exportToPDF()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
+                            <i class="fas fa-file-pdf mr-2"></i>PDF 저장
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Student Modal -->
+    <div id="student-modal" class="modal">
+        <div class="modal-content bg-white rounded-lg p-6 m-auto max-w-md">
+            <h3 class="text-xl font-bold mb-4">학생 추가</h3>
+            <form id="student-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">이름</label>
+                    <input type="text" id="student-name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">학년</label>
+                    <select id="student-grade" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                        <option value="">선택</option>
+                        <option value="중1">중1</option>
+                        <option value="중2">중2</option>
+                        <option value="중3">중3</option>
+                        <option value="고1">고1</option>
+                        <option value="고2">고2</option>
+                        <option value="고3">고3</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">전화번호</label>
+                    <input type="tel" id="student-phone" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">학부모 연락처</label>
+                    <input type="tel" id="parent-phone" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div class="flex gap-4">
+                    <button type="submit" class="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition">저장</button>
+                    <button type="button" onclick="closeStudentModal()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition">취소</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Class Modal -->
+    <div id="class-modal" class="modal">
+        <div class="modal-content bg-white rounded-lg p-6 m-auto max-w-lg">
+            <h3 class="text-xl font-bold mb-4">수업 카드 작성</h3>
+            <form id="class-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">학생</label>
+                    <select id="class-student" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                        <option value="">학생 선택</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">수업 날짜</label>
+                    <input type="datetime-local" id="class-date" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">과목</label>
+                    <input type="text" id="class-subject" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">수업 내용</label>
+                    <textarea id="class-content" rows="3" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">과제</label>
+                    <textarea id="class-homework" rows="2" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">특이사항</label>
+                    <textarea id="class-notes" rows="2" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                </div>
+                <div class="flex gap-4">
+                    <button type="submit" class="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition">저장</button>
+                    <button type="button" onclick="closeClassModal()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition">취소</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script src="js/googleSheets.js"></script>
+</body>
+</html>
